@@ -1,18 +1,13 @@
-// display the message Welcome to Holberton School,
-// what is your name?
-// user should be able to input their name on a new lin
-// display the message Hello <name>, nice to meet you!
+process.stdout.write('Welcome to Holberton School, what is your name?\n');
 
-console.log('Welcome to Holberton School, what is your name?');
+process.stdin.on('readable', () => {
+  const chunk = process.stdin.read();
 
-process.stdin
-  .on('readable', () => {
-    const input = process.stdin.read();
-    if (input) {
-      process.stdout.write(`Your name is: ${input}`);
-    }
-  })
+  if (chunk) {
+    process.stdout.write(`Your name is: ${chunk}`);
+  }
+});
 
-  .on('end', () => {
-    process.stdout.write('This important software is now closing\n');
-  });
+process.stdin.on('end', () => {
+  process.stdout.write('This important software is now closing\n');
+});

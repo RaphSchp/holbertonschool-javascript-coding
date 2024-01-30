@@ -1,64 +1,65 @@
-// create a class named StudentsController
-
 import readDatabase from '../utils';
 
+const VALID_MAJORS = ['CS', 'SWE'];
+
 class StudentsController {
-  // first create a static method named getStudents
-  // that takes a request and a response as parameters
-  // and returns a list of students
-  // then create a static method named getAllStudentsByMajor
+  static getAllStudents(request, response) {
+    const dataPath = process.argv.length > 2 ? process.argv[2] : '';
 
-  static getAllStudents(_req, res) {
-    res.status(200);
-    readDatabase(process.argv[2])
-      .then((data) => {
-        res.write('This is the list of our students\n');
-
-        const fields = Object.keys(data);
-
-        for (let i = 0; i < fields.length; i += 1) {
-          res.write(
-            `Number of students in ${fields[i]}: ${
-              data[fields[i]].numStudents
-            }. `,
-          );
-          res.write(`List: ${data[fields[i]].names.join(', ')}`);
-
-          if (i < fields.length - 1) {
-            res.write('\n');
+    readDatabase(dataPath)
+      .then((studentGroups) => {
+        const responseParts = ['This is the list of our students'];
+        const cmpFxn = (a, b) => {
+          if (a[0].toLowerCase() < b[0].toLowerCase()) {
+            return -1;
           }
+          if (a[0].toLowerCase() > b[0].toLowerCase()) {
+            return 1;
+          }
+          return 0;
+        };
+
+        for (const [field, group] of Object.entries(studentGroups).sort(cmpFxn)) {
+          responseParts.push([
+            `Number of students in ${field}: ${group.length}.`,
+            'List:',
+            group.map((student) => student.firstname).join(', '),
+          ].join(' '));
         }
+        response.status(200).send(responseParts.join('\n'));
       })
       .catch((err) => {
-        res.write(err.message);
-      })
-      .finally(() => {
-        res.end();
+        response
+          .status(500)
+          .send(err instanceof Error ? err.message : err.toString());
       });
   }
 
-  static getAllStudentsByMajor(req, res) {
-    res.status(200);
-    readDatabase(process.argv[2])
-      .then((data) => {
-        const fields = Object.keys(data);
+  static getAllStudentsByMajor(request, response) {
+    const dataPath = process.argv.length > 2 ? process.argv[2] : '';
+    const { major } = request.params;
 
-        const { major } = req.params;
+    if (!VALID_MAJORS.includes(major)) {
+      response.status(500).send('Major parameter must be CS or SWE');
+      return;
+    }
+    readDatabase(dataPath)
+      .then((studentGroups) => {
+        let responseText = '';
 
-        if (fields.includes(major)) {
-          res.write(`List: ${data[major].names.join(', ')}`);
-        } else {
-          res.status(500);
-          res.write('Major parameter must be CS or SWE');
+        if (Object.keys(studentGroups).includes(major)) {
+          const group = studentGroups[major];
+          responseText = `List: ${group.map((student) => student.firstname).join(', ')}`;
         }
+        response.status(200).send(responseText);
       })
       .catch((err) => {
-        res.write(err.message);
-      })
-      .finally(() => {
-        res.end();
+        response
+          .status(500)
+          .send(err instanceof Error ? err.message : err.toString());
       });
   }
 }
 
+export default StudentsController;
 module.exports = StudentsController;
