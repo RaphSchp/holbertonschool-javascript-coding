@@ -1,65 +1,41 @@
-import readDatabase from '../utils';
-
-const VALID_MAJORS = ['CS', 'SWE'];
+import readDatabase from "../utils";
 
 class StudentsController {
   static getAllStudents(request, response) {
-    const dataPath = process.argv.length > 2 ? process.argv[2] : '';
+    readDatabase(process.argv[2] || "./database.csv")
+      .then((studentsData) => {
+        const responseText = `This is the list of our students\n` +
+          `Number of students in CS: ${studentsData.CS.length}. List: ${studentsData.CS}\n` +
+          `Number of students in SWE: ${studentsData.SWE.length}. List: ${studentsData.SWE}\n`;
 
-    readDatabase(dataPath)
-      .then((studentGroups) => {
-        const responseParts = ['This is the list of our students'];
-        const cmpFxn = (a, b) => {
-          if (a[0].toLowerCase() < b[0].toLowerCase()) {
-            return -1;
-          }
-          if (a[0].toLowerCase() > b[0].toLowerCase()) {
-            return 1;
-          }
-          return 0;
-        };
-
-        for (const [field, group] of Object.entries(studentGroups).sort(cmpFxn)) {
-          responseParts.push([
-            `Number of students in ${field}: ${group.length}.`,
-            'List:',
-            group.map((student) => student.firstname).join(', '),
-          ].join(' '));
-        }
-        response.status(200).send(responseParts.join('\n'));
+        response.status(200).send(responseText);
       })
-      .catch((err) => {
-        response
-          .status(500)
-          .send(err instanceof Error ? err.message : err.toString());
+      .catch((error) => {
+        console.error("Error processing students data:", error);
+        response.status(500).send('Cannot load the database');
       });
   }
 
   static getAllStudentsByMajor(request, response) {
-    const dataPath = process.argv.length > 2 ? process.argv[2] : '';
-    const { major } = request.params;
+    const major = request.params.major;
 
-    if (!VALID_MAJORS.includes(major)) {
+    if (major !== 'CS' && major !== 'SWE') {
       response.status(500).send('Major parameter must be CS or SWE');
       return;
     }
-    readDatabase(dataPath)
-      .then((studentGroups) => {
-        let responseText = '';
 
-        if (Object.keys(studentGroups).includes(major)) {
-          const group = studentGroups[major];
-          responseText = `List: ${group.map((student) => student.firstname).join(', ')}`;
-        }
+    readDatabase(process.argv[2] || "./database.csv")
+      .then((studentsData) => {
+        const majorStudents = studentsData[major] || [];
+        const responseText = `List: ${majorStudents.join(', ')}\n`;
+
         response.status(200).send(responseText);
       })
-      .catch((err) => {
-        response
-          .status(500)
-          .send(err instanceof Error ? err.message : err.toString());
+      .catch((error) => {
+        console.error("Error processing students data:", error);
+        response.status(500).send('Cannot load the database');
       });
   }
 }
 
 export default StudentsController;
-module.exports = StudentsController;
